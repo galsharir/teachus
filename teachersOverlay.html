@@ -1,0 +1,52 @@
+
+    <script>
+
+
+      function getFriends() {
+          FB.api('/1400026969/picture', function(res) { document.getElementById("barak_pic").src=res.data.url; });
+          FB.api('/683337600/picture', function(res) { document.getElementById("nizzan_pic").src=res.data.url; });
+          FB.api('/542737197/picture', function(res) { document.getElementById("gal_pic").src=res.data.url; });
+        }
+
+
+
+        // Additional JS functions here
+        getFriends();
+  
+    </script>
+
+      
+      <div class="col-lg-12" id="banner" >
+        <div class="page-header"><h1 class="center">Available Teachers</h1></div>
+          <div class="center well col-lg-6" id="teachers">
+            <div class="form-group">
+              <table></tr>
+              <tr onclick="FB.ui({
+        app_id:'1424049571143355',
+        method: 'send',
+        name: 'TeachMe!',
+        link: 'https://apps.facebook.com/teachus',
+        to:'nizzan',
+        description:'Hi, could you please teach me?'
+    });"><td>
+                <img id="nizzan_pic" style="border-radius: 5px;"/>
+              </td><td width=100%>
+                <input class="btn btn-success col-lg-4" style="height:50px;align:right;" type="submit"  value="Nizzan">
+              </td></tr>
+              <tr onclick="FB.ui({
+        app_id:'1424049571143355',
+        method: 'send',
+        name: 'TeachMe!',
+        link: 'https://apps.facebook.com/teachus',
+        to:'1400026969',
+        description:'Hi, could you please teach me?'
+    });"><td>
+                <img id="barak_pic" style="border-radius: 5px;"/>
+              </td><td>
+                <input class="btn btn-success col-lg-4" style="height:50px;align:right;" type="submit"  value="Barak">
+              </td></tr></table>
+              </div>
+             <input class="btn btn-danger col-lg-4";" type="button"  value="Close" onclick="removeOverlay();"> 
+            
+          </div>
+        </div>

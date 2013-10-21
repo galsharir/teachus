@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>home</title>
+        <link rel="stylesheet" href="slate.css" type="text/css"/ >
+        <link rel="stylesheet" href="teach.css" type="text/css"/ >
+		
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js">
+        </script>
+        <script>
+            allCourses = "";
+            BASIC_LISTING = "         \
+                                   <div class=\"navbar navbar-default\" id=\"row_%CLASS_NAME%\"> \
+                                    <div class=\"container\"> \
+                                        <div class=\"navbar-header\"> \
+                                            <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\" data-target=\".navbar-responsive-collapse\">\
+                                              <span class=\"icon-bar\"></span> \
+                                              <span class=\"icon-bar\"></span> \
+                                              <span class=\"icon-bar\"></span> \
+                                            </button> \
+                                            <a class=\"navbar-brand\" href=\"#\">%CLASS_NAME%</a> \
+                                        </div> \
+                                        <div class=\"nav navbar-nav navbar-right\">    \
+                                            <div class=\"options\" > \
+                                                <button type=\"button\" class=\"btn btn-info\" id=\"%CLASS_NAME%_teachers_btn\" onclick=\"popTeachers();\">Teachers</button> \
+                                                <button type=\"button\" class=\"btn btn-danger\" id=\"%CLASS_NAME%_groups_btn\" onclick=\"window.location='groups.html?classname=%CLASS_NAME%';\">Groups</button> \
+                                                <button type=\"button\" class=\"btn btn-success\" onclick=\"requestTeacher('%CLASS_NAME%');\" id=\"%CLASS_NAME%_askteacher_btn\">Ask for a Teacher</button> \
+                                                <button type=\"button\" class=\"btn btn-info\" onclick=\"dropCourse('%CLASS_NAME%');\">Drop</button> \
+                                            </div><!-- /.nav-collapse --> \
+                                        </div> \
+                                    </div><!-- /.container --> \
+                                </div> \
+            "
+
+            $(document).ready(function(){
+                //alert("AAA");
+                //$("#groups").load("demo_groups.txt");
+                // DO SOMETHING?!
+            });
+
+			var courses = {};
+			var user_courses = [];
+			
+            function initializePage() {
+
+                document.getElementById("banner").style.display = "block";
+                document.getElementById("fblogin").style.display = "none";
+
+				// Get courses mapping
+				$.ajax({
+						url: "https://api.knackhq.com/v1/objects/object_3/records"
+						, type: 'GET'
+						, headers: {
+						'X-Knack-Application-Id': '52636cc6a57cf7ef37960147'
+						, 'X-Knack-REST-API-Key': 'a03316c0-394b-11e3-8427-e9b45ff3bcd7'
+						}
+						, success: function(data) {
+							res = data.records;
+							
+							for(var i=0; i < res.length ;i++) {
+								cur_course = res[i];
+								courses[cur_course['field_4']] = cur_course['field_5'];
+							}
+						}
+				});
+				
+				// Get courses per user
+				$.ajax({
+						url: "https://api.knackhq.com/v1/objects/object_6/records"
+						, type: 'GET'
+						, headers: {
+						'X-Knack-Application-Id': '52636cc6a57cf7ef37960147'
+						, 'X-Knack-REST-API-Key': 'a03316c0-394b-11e3-8427-e9b45ff3bcd7'
+						}
+						, success: function(data) {
+							g = "<li class=\"list-group-item\">";
+							res = data.records;
+							user_id = FB.getUserID();
+							
+							
+							var listitems = "";
+                        for(var i=0; i < res.length ;i++) {
+								if (res[i]['field_11'] == user_id) {
+									course_id = res[i]['field_10'];
+
+                                    user_courses.push(course_id);
+									listitems += BASIC_LISTING.replace(new RegExp("%CLASS_NAME%", 'g'), courses[course_id]);
+								}
+                        }
+                        
+                        document.getElementById("Classes").innerHTML = listitems;
+
+                        if(FB.getUserID() == "683337600") {
+                            popStudents();
+                        }
+                        
+                    }
+				});
+				
+            }
+
+		var click_course;
+        function showavail(str) {
+            str = str.toUpperCase();
+            suggestBox = document.getElementById("livesearch");
+            if (str.length != 0 && courses.length != 0) { 
+                
+				// Get courses names
+				var course_names = [];
+				for(key in courses) {
+					if(courses.hasOwnProperty(key)) {
+						course_names.push(courses[key]);
+					}
+				}
+				
+                var suggestions = "";
+                for(var i=0;i<course_names.length ; i++) {
+                    if(course_names[i].indexOf(str) != -1) {
+                        click_course = course_names[i];
+						suggestions += "<a onclick=enrollToCourse(click_course)>" + click_course + "</a><br />";
+                    }
+                }
+				
+                if (suggestions.length != 0) {
+                    suggestBox.innerHTML = suggestions;
+                    suggestBox.style.border = "1px solid #A5ACB2";
+                    return;
+                }
+            }
+            suggestBox.innerHTML="";
+            suggestBox.style.border="0px";
+        }
+
+		function enrollToCourse(course_name) {
+			// TODO: Later add a popup that will ask the user whether to enroll or not
+			// Find corresponding course_id
+			var course_id;
+			for(key in courses) {
+				if(courses.hasOwnProperty(key)) {
+					if (courses[key] == course_name) {
+						course_id = key;
+					}
+				}
+			}
+			
+			// A user cannot enroll to a course twice
+			if (!(course_id in user_courses)) {
+				// Add a database record for the enrollment
+				enrollment = new Object();
+				enrollment.field_10 = course_id;
+				enrollment.field_11 = FB.getUserID();
+				enrollment.format = "html";
+				$.ajax({
+					url: 'https://api.knackhq.com/v1/objects/object_6/records'
+					, type: 'POST'
+					, headers: {
+					'X-Knack-Application-Id': '52636cc6a57cf7ef37960147'
+					, 'X-Knack-REST-API-Key': 'a03316c0-394b-11e3-8427-e9b45ff3bcd7'
+					, 'Content-Type': 'application/json'
+					}
+					, data: JSON.stringify(enrollment)
+					, success: function(data) {
+						// Reload the page
+						location.reload();
+					}
+				});
+				
+			}
+		}
+
+        function popStudents() {
+
+           var overlay = document.createElement("div");
+           overlay.setAttribute("id","overlay");
+           overlay.setAttribute("class", "overlay");
+           document.body.appendChild(overlay);
+           $("#overlay").load("students.html");
+        }
+
+		function popTeachers() {
+
+           var overlay = document.createElement("div");
+           overlay.setAttribute("id","overlay");
+           overlay.setAttribute("class", "overlay");
+           document.body.appendChild(overlay);
+           $("#overlay").load("teachersOverlay.html");
+        }
+
+        function addNewClass() {
+
+           var overlay = document.createElement("div");
+           overlay.setAttribute("id","overlay");
+           overlay.setAttribute("class", "overlay");
+           document.body.appendChild(overlay);
+           $("#overlay").load("newclass.html");
+        }
+
+        function removeAddNewClass() {
+            removeOverlay();
+        }
+
+        function removeOverlay() {
+            x = document.getElementById("overlay");
+            if(x != null) {
+                x.remove();
+            }
+        }
+
+        function requestTeacher(className) {
+            // TODO: request a teacher...
+            but = document.getElementById(className + "_askteacher_btn");
+            if(but.innerHTML == "Ask for a Teacher") {
+                but.innerHTML = "Searching for teacher...";
+            } else {
+                but.innerHTML ="Ask for a Teacher";
+            }
+        }
+
+        function dropCourse(className) {
+            row = document.getElementById("row_" + className);
+            row.remove();
+        }
+        </script>
+
+    </head>
+    <body>
+
+        <!-- START OF FACEBOOK CODE -->
+    <div id="fb-root"></div>
+    <script>
+      // Additional JS functions here
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '1424049571143355', // App ID
+          channelUrl : '/localhost/ channel.html', // Channel File
+          status     : true, // check login status
+          cookie     : true, // enable cookies to allow the server to access the session
+          xfbml      : true  // parse XFBML
+        });
+
+
+        // Additional init code here
+        FB.getLoginStatus(function(response) {
+              // this will be called when the roundtrip to Facebook has completed
+              if(FB.getUserID().length > 0) {
+                initializePage();
+            } else {
+                document.getElementById("fblogin").style.display = "block";
+                document.getElementById("banner").style.display = "none";
+            }
+        }, true);
+        
+      };
+
+      // Load the SDK asynchronously
+      (function(d){
+         var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+         if (d.getElementById(id)) {return;}
+         js = d.createElement('script'); js.id = id; js.async = true;
+         js.src = "//connect.facebook.net/en_US/all.js";
+         ref.parentNode.insertBefore(js, ref);
+       }(document));
+
+
+      
+    </script>
+
+    <center><div id="fblogin" class="fb-login-button" data-width="500" onlogin="initializePage();"  show-faces=true style="display:none"></div>
+    </center>
+<!-- END OF FACEBOOK CODE -->
+
+
+
+
+
+        <div class="col-lg-12" id="banner" style="display:none">
+          <div class="page-header center">
+            <h1>My Profile</h1>
+          </div>
+              <div class="center well col-lg-6">
+                  <h2 class="page-header" >My Classes</h2>
+                  <div  id="Classes">
+                        <!-- Auto Filled -->
+                  </div>
+
+                    <!--search and add a class-->
+                    <div class="navbar navbar-default">
+                        <div class="container">
+                            <div class="navbar-header">
+                                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-responsive-collapse">
+                                  <span class="icon-bar"></span>
+                                  <span class="icon-bar"></span>
+                                  <span class="icon-bar"></span>
+                                </button>
+                                <div class="options" >
+                                <button type="button" class="btn btn-info" onclick="addNewClass();">Add New Class</button>
+                                </div>
+                            </div>
+                            <div class="nav navbar-nav navbar-right">    
+                                <form class="navbar-form navbar-left">
+                                    <input type="text" id="course_search" class="form-control col-lg-8" placeholder="Search Available Classes" onkeyup="showavail(this.value);" />
+                                    <div id="livesearch"><!-- AUTO FILLED--></div>
+                                </form>
+                            </div>
+                        </div><!-- /.container -->
+                     </div>
+              </div>
+        </div>
+    </body>
+</html>

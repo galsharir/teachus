@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>groups</title>
+        <link rel="stylesheet" href="slate.css" type="text/css"/ >
+        <link rel="stylesheet" href="teach.css" type="text/css"/ >
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+
+        <script>
+
+            var BASIC_GROUP = "<div class=\"navbar navbar-default\" id = \"row_%GROUP_NAME%\"> \
+                                <div class=\"container\"> \
+                        <div class=\"navbar-header\"> \
+                            <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\" data-target=\".navbar-responsive-collapse\"> \
+                              <span class=\"icon-bar\"></span> \
+                              <span class=\"icon-bar\"></span> \
+                              <span class=\"icon-bar\"></span> \
+                            </button> \
+                            <a class=\"navbar-brand\" href=\"#\">%GROUP_NAME%</a> \
+                        </div> \
+                        <div class=\"nav navbar-nav navbar-right\">    \
+                            <div class=\"options\" > \
+                                <button type=\"button\" class=\"btn btn-info\" id = \"%GROUP_NAME%_members_btn\">See Members \
+                                <span class=\"badge\" id = \"%GROUP_NAME%_member_count\">%MEMBER_COUNT%</span>\
+                                </button> \
+                                <button type=\"button\" class=\"btn btn-success\" id = \"%GROUP_NAME%_join_btn\" onclick=\"joinGroup('%GROUP_NAME%');\">Join Group</button> \
+                                <button type=\"button\" class=\"btn btn-danger\" id = \"%GROUP_NAME%_drop_btn\" onclick=\"dropGroup('%GROUP_NAME%');\">Drop Group</button> \
+                            </div><!-- /.nav-collapse --> \
+                        </div> \
+                    </div><!-- /.container --> \
+                </div>";
+
+            function getParameterByName(name) {
+                name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+                var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+                results = regex.exec(location.search);
+                return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+            }
+
+			function getClassName() {
+                return getParameterByName("classname");
+            }
+
+
+            // Initialization function, loads all groups
+            $(document).ready(function(){
+                // Get groups
+                $.ajax({
+                        url: "https://api.knackhq.com/v1/objects/object_2/records"
+                        , type: 'GET'
+                        , headers: {
+                        'X-Knack-Application-Id': '52636cc6a57cf7ef37960147'
+                        , 'X-Knack-REST-API-Key': 'a03316c0-394b-11e3-8427-e9b45ff3bcd7'
+                        }
+                        , success: function(data) {
+                            res = data.records;
+							listitems = "";
+                            for(var i = 0 ; i < res.length ; i++) {
+                                groupitem = BASIC_GROUP.replace(new RegExp("%GROUP_NAME%", 'g'), res[i]['field_12']);
+                                groupitem = groupitem.replace("%MEMBER_COUNT%", Math.floor(Math.random()*4+1));
+                                listitems += groupitem;
+                                //cur_course = res[i];
+                                //courses[cur_course['field_4']] = cur_course['field_5'];
+                            }
+							
+            							groups = document.getElementById('groups');
+            							groups.innerHTML = listitems;
+
+                          // Remove drop/join
+                          for(var i = 0 ; i < res.length ; i++) {
+                            if(Math.floor(Math.random()*2+1) == 1) {
+                              document.getElementById(res[i]['field_12']+"_join_btn").style.display = "none";
+                            }else {
+                              document.getElementById(res[i]['field_12']+"_drop_btn").style.display = "none";
+                            }
+                          }
+
+
+                        }
+                });
+
+
+
+            });
+
+            function toggleJoin(groupname) {
+              if(document.getElementById(groupname+"_join_btn").style.display == "none") {
+                document.getElementById(groupname+"_join_btn").style.display = "";
+                document.getElementById(groupname+"_drop_btn").style.display = "none"
+                
+                m = document.getElementById(groupname+"_member_count");
+                num = parseInt(m.innerHTML);
+                m.innerHTML = num - 1;
+
+                
+              } else {
+                document.getElementById(groupname+"_join_btn").style.display = "none";
+                document.getElementById(groupname+"_drop_btn").style.display = "";
+
+                m = document.getElementById(groupname+"_member_count");
+                num = parseInt(m.innerHTML);
+                m.innerHTML = num + 1;
+              }
+
+            }
+              
+			
+            function joinGroup(groupName) {
+              toggleJoin(groupName);
+               // Get all groups
+			   
+			   $.ajax({
+						url: "https://api.knackhq.com/v1/objects/object_2/records"
+						, type: 'GET'
+						, headers: {
+						'X-Knack-Application-Id': '52636cc6a57cf7ef37960147'
+						, 'X-Knack-REST-API-Key': 'a03316c0-394b-11e3-8427-e9b45ff3bcd7'
+						}
+						, success: function(data) {
+							res = data.records;
+							var group_id;
+							for (var i=0; i< res.length; i++) {
+								cur_record = res[i];
+								if (cur_record['field_12'] == groupName) {
+									group_id = cur_record['field_3'];
+								}
+							}
+							
+						   user_id = FB.getUserID();
+						   join_group = new Object();
+						   join_group.field_6 = user_id;
+						   join_group.field_7 = group_id;
+						   join_group.format = "html";
+						   $.ajax({
+								url: 'https://api.knackhq.com/v1/objects/object_4/records'
+								, type: 'POST'
+								, headers: {
+								'X-Knack-Application-Id': '52636cc6a57cf7ef37960147'
+								, 'X-Knack-REST-API-Key': 'a03316c0-394b-11e3-8427-e9b45ff3bcd7'
+								, 'Content-Type': 'application/json'
+								}
+								, data: JSON.stringify(join_group)
+								, success: function(data) {
+									// Do nothing
+								}
+							});
+							
+						}
+				});
+			   
+			   
+			   
+			   
+            }
+
+            function dropGroup(groupName) {
+                // TODO: remove from DB
+                toggleJoin(groupName);
+
+            }
+        </script>
+    
+
+    </head>
+    <body>
+	<div id="fb-root"></div>
+    <script>
+
+            // Load the SDK asynchronously
+      (function(d){
+         var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+         if (d.getElementById(id)) {return;}
+         js = d.createElement('script'); js.id = id; js.async = true;
+         js.src = "//connect.facebook.net/en_US/all.js";
+         ref.parentNode.insertBefore(js, ref);
+       }(document));
+
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '1424049571143355', // App ID
+          channelUrl : '/localhost/ channel.html', // Channel File
+          status     : true, // check login status
+          cookie     : true, // enable cookies to allow the server to access the session
+          xfbml      : true  // parse XFBML
+        });
+
+      }
+
+      
+
+        
+
+      
+    </script>
+
+        <div class="col-lg-12" id="banner">
+            <div class="page-header">
+              <h1 class="center">Available Learning Groups</h1>
+            </div>
+            <div class="center well col-lg-6" id="groups">
+                <!-- AUTO FILLED -->
+            </div>
+			<div class="center well col-lg-6" id="addgroup">
+                <div class="navbar navbar-default">
+                        <div class="container">
+                            <div class="navbar-header">
+                                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-responsive-collapse">
+                                  <span class="icon-bar"></span>
+                                  <span class="icon-bar"></span>
+                                  <span class="icon-bar"></span>
+                                </button>
+                                <a class="navbar-brand" href="file://localhost/Users/galsharir/Dropbox/Hackathons/Gal/html%20pages/newgroup.html">Add New Group</a>
+                            </div>
+                            <div class="nav navbar-nav navbar-right">    
+                                <form class="navbar-form navbar-left">
+                                    <input type="text" id="course_search" class="form-control col-lg-8" placeholder="Find Group" onkeyup="showavail(this.value);" /><div id="livesearch"><!-- AUTO FILLED--></div>
+                                </form>
+                            </div>
+                        </div><!-- /.container -->
+                     </div>
+            </div>
+        </div>
+		
+    </body>
+</html>
